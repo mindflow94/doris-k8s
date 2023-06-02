@@ -14,7 +14,7 @@ Doris 官网上有 Kubernetes 部署的文档，无奈根据官网的文档，�
 
 ## 部署流程
 
-部署非常简单，创建拷贝 yaml 文件内容，即可启动。若需修改版本，参考下文自定义镜像。以下为示例，详情可以查看 [GitHub doris-k8s](!https://github.com/mindflow94/doris-k8s) 
+部署非常简单，创建拷贝 yaml 文件内容，即可启动。若需修改版本，参考下文自定义镜像。以下为示例，详情可以查看 [GitHub doris-k8s](https://github.com/mindflow94/doris-k8s) 
 
 ### 启动 FE 服务
 
