@@ -1,0 +1,24 @@
+# 选择基础镜像
+FROM openjdk:8u342-jdk
+
+# 设置环境变量
+ENV JAVA_HOME="/usr/local/openjdk-8/" \
+    PATH="/opt/apache-doris/fe/bin:$PATH"
+
+ADD apache-doris-fe-1.2.4.1-bin-x86_64.tar.gz /opt
+
+ENV LANG=zh_CN.UTF-8 \
+LANGUAGE=zh_CN:zh
+ENV DORIS_HOME /opt/apache-doris/fe
+
+RUN apt-get update && \
+    apt-get install -y default-mysql-client && \
+    apt-get clean && \
+    mkdir /opt/apache-doris && \
+    mv /opt/apache-doris-fe-1.2.4.1-bin-x86_64 /opt/apache-doris/fe && \
+    ls /opt/apache-doris/fe && \
+    ls /opt/apache-doris/fe/bin
+
+RUN echo 'priority_networks = ${FE_IPADDRESS}/24' >> /opt/apache-doris/fe/conf/fe.conf
+
+CMD ["tail -f /dev/null"]

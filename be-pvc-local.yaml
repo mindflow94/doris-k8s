@@ -1,0 +1,85 @@
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: doris-be
+  labels:
+    app: doris-be
+spec:
+  serviceName: "doris-be-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: doris-be
+  template:
+    metadata:
+      labels:
+        app: doris-be
+    spec:
+      hostNetwork: false
+      dnsPolicy: ClusterFirst
+      terminationGracePeriodSeconds: 120            
+      containers:
+        - name: doris-be
+          env:
+            - name: BE_IPADDRESS
+              valueFrom:
+                 fieldRef:
+                   fieldPath: status.podIP
+            - name: BE_PORT
+              value: "9050"
+            - name: FE_MASTER_IP
+              value: "doris-fe.default.svc.cluster.local"
+            - name: FE_MASTER_PORT
+              value: "9030"
+            - name: POD_NAME
+              valueFrom:
+                 fieldRef:
+                   fieldPath: metadata.name  
+          image: "zyzcenter/apache-doris:1.2.4.1-be"
+          imagePullPolicy: Always
+          command: [ "/bin/bash", "-ce", "/opt/apache-doris/be/bin/start_be.sh --daemon;tail -f /dev/null" ]
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - bash
+                  - -c
+                  - '/opt/apache-doris/be/bin/cancel_be.sh;sleep 10'
+          volumeMounts:
+          - mountPath: /opt/apache-doris/be/storage
+            name: volume-be
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8040
+            initialDelaySeconds: 300
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3 
+          ports:
+            - containerPort: 9060
+              protocol: TCP
+            - containerPort: 9070
+              protocol: TCP
+            - containerPort: 8040
+              protocol: TCP
+            - containerPort: 9050
+              protocol: TCP
+            - containerPort: 8060
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 2
+              memory: 2G
+            requests:
+              cpu: 200m
+              memory: 1G
+  volumeClaimTemplates:
+  - metadata:
+      name: volume-be
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "local"
+      resources:
+        requests:
+          storage: 10Gi

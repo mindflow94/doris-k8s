@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: Service              
+metadata: 
+  name: doris-fe     
+  namespace: default       
+  labels: 
+    app: doris-fe
+
+spec: 
+  type: NodePort           
+  ports: 
+    - name: http
+      port: 8030           
+      protocol: TCP
+      targetPort: 8030       
+      nodePort: 32130
+    - name: tcp
+      port: 9020           
+      protocol: TCP
+      targetPort: 9020       
+      nodePort: 32220
+    - name: tcp2
+      port: 9030           
+      protocol: TCP
+      targetPort: 9030       
+      nodePort: 32230
+    - name: tcp1
+      port: 9010           
+      protocol: TCP
+      targetPort: 9010       
+      nodePort: 32210
+  selector: 
+    app: doris-fe
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: doris-fe
+  labels:
+    app: doris-fe
+spec:
+  serviceName: "doris-fe-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: doris-fe
+  template:
+    metadata:
+      labels:
+        app: doris-fe
+    spec:
+      hostNetwork: false
+      dnsPolicy: ClusterFirst
+      containers:
+        - name: doris-fe
+          env:
+          - name: FE_IPADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: FE_PORT
+            value: "9030"
+          - name: FE_EDIT_PORT
+            value: "9010"
+          image: "zyzcenter/apache-doris:1.2.4.1-fe"
+          imagePullPolicy: Always
+          command: [ "/bin/bash", "-ce", "/opt/apache-doris/fe/bin/start_fe.sh --daemon;tail -f /dev/null" ]
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - bash
+                  - -c
+                  - '/opt/apache-doris/fe/bin/check_register_fe.sh'
+          volumeMounts:
+          - mountPath: /opt/apache-doris/fe/doris-meta
+            name: volume-fe
+          livenessProbe:
+            httpGet:
+              path: /api/bootstrap
+              port: 8030
+            initialDelaySeconds: 300
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3      
+          ports:
+            - containerPort: 8030
+              protocol: TCP
+            - containerPort: 9020
+              protocol: TCP
+            - containerPort: 9030
+              protocol: TCP
+            - containerPort: 9010
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 2
+              memory: 4G
+            requests:
+              cpu: 200m
+              memory: 1G
+  volumeClaimTemplates:
+  - metadata:
+      name: volume-fe
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "local"
+      resources:
+        requests:
+          storage: 5Gi
